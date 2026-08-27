@@ -427,26 +427,50 @@ function Final({ onReplay }) {
   );
 }
 
-function MusicButton() {
-  const audioRef = useRef(null);
+function MusicButton({ audioRef }) {
   const [playing, setPlaying] = useState(false);
-  const toggle = async () => {
-    if (!audioRef.current) return;
+
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    const handlePlay = () => setPlaying(true);
+    const handlePause = () => setPlaying(false);
+
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+
+    return () => {
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
+    };
+  }, [audioRef]);
+
+  const toggleMusic = async () => {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
     try {
-      if (playing) { audioRef.current.pause(); setPlaying(false); }
-      else { await audioRef.current.play(); setPlaying(true); }
-    } catch {
-      setPlaying(false);
+      if (audio.paused) {
+        await audio.play();
+      } else {
+        audio.pause();
+      }
+    } catch (error) {
+      console.error("Unable to play music:", error);
     }
   };
+
   return (
-    <>
-      <audio ref={audioRef} loop src="/music/birthday.mp3" onError={() => setPlaying(false)} />
-      <button onClick={toggle} aria-label="Toggle birthday music"
-        className="fixed bottom-5 right-5 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/50 text-white/70 shadow-xl backdrop-blur-xl transition hover:bg-white/10">
-        {playing ? <Volume2 size={17} /> : <VolumeX size={17} />}
-      </button>
-    </>
+    <button
+      onClick={toggleMusic}
+      aria-label="Toggle birthday music"
+      className="fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white/70 shadow-xl backdrop-blur-xl transition hover:scale-105 hover:bg-white/10"
+    >
+      {playing ? <Volume2 size={18} /> : <VolumeX size={18} />}
+    </button>
   );
 }
 
@@ -454,7 +478,7 @@ function App() {
   const [booted, setBooted] = useState(false);
   const [secret, setSecret] = useState(false);
   const [logoClicks, setLogoClicks] = useState(0);
-
+  const audioRef = useRef(null);
   useEffect(() => {
     if (logoClicks >= 5) {
       setSecret(true);
@@ -476,10 +500,29 @@ function App() {
     return () => window.removeEventListener("keydown", keyHandler);
   }, []);
 
-  const enter = () => {
-    setBooted(true);
-    setTimeout(() => document.getElementById("top")?.scrollIntoView({ behavior: "smooth" }), 80);
-  };
+const enter = () => {
+  // Start the birthday music after the user's ENTER click
+  if (audioRef.current) {
+    audioRef.current.volume = 0.65;
+
+    audioRef.current
+      .play()
+      .then(() => {
+        console.log("Birthday music started 🎵");
+      })
+      .catch((error) => {
+        console.log("Music autoplay was blocked:", error);
+      });
+  }
+
+  setBooted(true);
+
+  setTimeout(() => {
+    document
+      .getElementById("top")
+      ?.scrollIntoView({ behavior: "smooth" });
+  }, 80);
+};
 
   const replay = () => {
     setBooted(false);
@@ -488,6 +531,12 @@ function App() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#08060f] text-white">
+      <audio
+  ref={audioRef}
+  src="/music/birthday.mp3"
+  loop
+  preload="auto"
+/>
       <Stars />
       <AnimatePresence mode="wait">
         {!booted && <BootScreen key="boot" onEnter={enter} />}
@@ -525,7 +574,7 @@ function App() {
             KATY OS • BIRTHDAY EDITION • BUILT WITH ♥ AND A LOT OF CODE
           </footer>
 
-          <MusicButton />
+          <MusicButton audioRef={audioRef} />
 
           <AnimatePresence>
             {secret && (
