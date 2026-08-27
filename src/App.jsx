@@ -574,7 +574,7 @@ const enter = () => {
             KATY OS • BIRTHDAY EDITION • BUILT WITH ♥ AND A LOT OF CODE
           </footer>
 
-          <MusicButton audioRef={audioRef} />
+          <MusicButton   audioRef={audioRef} />
 
           <AnimatePresence>
             {secret && (
